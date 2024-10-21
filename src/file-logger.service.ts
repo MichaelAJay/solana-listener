@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AccountInfo } from '@solana/web3.js';
+import { AccountInfo, Context, Logs } from '@solana/web3.js';
 import { appendFile } from 'fs';
 import * as path from 'path';
 
@@ -24,7 +24,16 @@ export class FileLoggerService {
       null,
       2,
     );
-    appendFile(this.logFilePath, `${serializedData}\n`, (err) => {
+    appendFile(this.logFilePath, `acctChange: ${serializedData}\n`, (err) => {
+      if (err) {
+        console.error('Failed to write to log file:', err);
+      }
+    });
+  }
+
+  async logLogs(logs: Logs, context: Context): Promise<void> {
+    const serializedData = JSON.stringify({ logs, context });
+    appendFile(this.logFilePath, `log: ${serializedData}\n`, (err) => {
       if (err) {
         console.error('Failed to write to log file:', err);
       }

@@ -1,6 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import {
+  AccountInfo,
+  Connection,
+  Context,
+  Logs,
+  PublicKey,
+} from '@solana/web3.js';
 import { FileLoggerService } from 'src/file-logger.service';
 
 @Injectable()
@@ -60,6 +66,7 @@ export class EventSubscriberService implements OnModuleInit {
       }
 
       await this.subscribeToAccountChanges();
+      await this.subscribeToLogs();
     } catch (err) {
       console.error(
         'Failed to initialize EventSubscriberService:',
@@ -79,7 +86,23 @@ export class EventSubscriberService implements OnModuleInit {
     );
   }
 
+  private async subscribeToLogs() {
+    this.connection.onLogs(
+      this.systemPublicKey,
+      async (logs, ctx) => {
+        // logs: { ..., signature: string }
+        // ctx: { slot: number }
+        await this.handleLogs(logs, ctx);
+      },
+      'confirmed',
+    );
+  }
+
   private async handleAccountChanges(updatedAccountInfo: AccountInfo<Buffer>) {
     await this.fileLogger.logAccountChange(updatedAccountInfo);
+  }
+
+  private async handleLogs(logs: Logs, context: Context) {
+    await this.fileLogger.logLogs(logs, context);
   }
 }
