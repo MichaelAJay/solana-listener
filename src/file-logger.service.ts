@@ -1,10 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { AccountInfo, Context, Logs } from '@solana/web3.js';
+import { AccountInfo, Context, Logs, SlotInfo } from '@solana/web3.js';
 import { appendFile } from 'fs';
 import * as path from 'path';
 
 @Injectable()
 export class FileLoggerService {
+  async logGeneral(input: any, prefix: string) {
+    const serializedData = JSON.stringify({
+      ...input,
+      time: new Date().toISOString(),
+    });
+    appendFile(this.logFilePath, `${prefix}: ${serializedData}\n`, (err) => {
+      if (err) {
+        console.error(`Failed to write to log file on ${prefix}:`, err);
+      }
+    });
+  }
+
+  async logSlotChange(slotInfo: SlotInfo) {
+    const serializedData = JSON.stringify({
+      ...slotInfo,
+      time: new Date().toISOString(),
+    });
+    appendFile(this.logFilePath, `slot change: ${serializedData}\n`, (err) => {
+      if (err) {
+        console.error('Failed to write to log file:', err);
+      }
+    });
+  }
   private logFilePath: string;
 
   constructor() {
@@ -32,7 +55,11 @@ export class FileLoggerService {
   }
 
   async logLogs(logs: Logs, context: Context): Promise<void> {
-    const serializedData = JSON.stringify({ logs, context });
+    const serializedData = JSON.stringify({
+      logs,
+      context,
+      time: new Date().toISOString(),
+    });
     appendFile(this.logFilePath, `log: ${serializedData}\n`, (err) => {
       if (err) {
         console.error('Failed to write to log file:', err);

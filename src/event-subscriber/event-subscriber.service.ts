@@ -6,6 +6,7 @@ import {
   Context,
   Logs,
   PublicKey,
+  SlotInfo,
 } from '@solana/web3.js';
 import { FileLoggerService } from 'src/file-logger.service';
 
@@ -65,8 +66,9 @@ export class EventSubscriberService implements OnModuleInit {
         console.log('System wallet account verified on-chain.');
       }
 
-      await this.subscribeToAccountChanges();
+      // await this.subscribeToAccountChanges();
       await this.subscribeToLogs();
+      await this.subscriptToSlotChange();
     } catch (err) {
       console.error(
         'Failed to initialize EventSubscriberService:',
@@ -98,11 +100,28 @@ export class EventSubscriberService implements OnModuleInit {
     );
   }
 
+  private async subscriptToSlotChange() {
+    this.connection.onSlotChange(async (slotInfo: SlotInfo) => {
+      await this.handleSlotChangeLogs(slotInfo);
+    });
+  }
+
   private async handleAccountChanges(updatedAccountInfo: AccountInfo<Buffer>) {
     await this.fileLogger.logAccountChange(updatedAccountInfo);
   }
 
   private async handleLogs(logs: Logs, context: Context) {
     await this.fileLogger.logLogs(logs, context);
+
+    const { signature } = logs;
+    const transaction = await this.connection.getParsedTransaction(signature);
+    const { slot } = context;
+    const block = await this.connection.getBlock(slot);
+    await this.fileLogger.logGeneral(transaction, 'transaction');
+    await this.fileLogger.logGeneral(block, 'block');
+  }
+
+  private async handleSlotChangeLogs(slotInfo: SlotInfo) {
+    await this.fileLogger.logSlotChange(slotInfo);
   }
 }
